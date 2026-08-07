@@ -290,7 +290,28 @@ def get_conversation(
 # ---------------------------------------------------------------------------
 # Static frontend
 # ---------------------------------------------------------------------------
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import Dict
 
+active_connections: Dict[str, WebSocket] = {}
+
+@app.websocket("/ws/{email}")
+async def websocket_endpoint(websocket: WebSocket, email: str):
+    await websocket.accept()
+    active_connections[email] = websocket
+    try:
+        while True:
+            data = await websocket.receive_json()
+            receiver = data.get("to")
+            if receiver and receiver in active_connections:
+                await active_connections[receiver].send_json({
+                    "from": email,
+                    "text": data.get("text"),
+                    "time": datetime.datetime.utcnow().isoformat()
+                })
+    except WebSocketDisconnect:
+        if email in active_connections:
+            del active_connections[email]
 app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/icon-192.png")
 def icon_192():

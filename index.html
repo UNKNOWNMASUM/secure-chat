@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Secure Chat</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 16px;
+    color: #38bdf8;
+  }
+  input, button {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    font-size: 15px;
+  }
+  input {
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  button {
+    background: #38bdf8;
+    color: #0f172a;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+  button:hover { background: #0ea5e9; }
+  .error { color: #f87171; font-size: 14px; margin-top: 6px; min-height: 18px; }
+  .switch { text-align: center; margin-top: 10px; font-size: 14px; }
+  .switch a { color: #38bdf8; cursor: pointer; text-decoration: underline; }
+
+  #chatView { display: none; width: 100%; max-width: 500px; }
+  #messages {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 12px;
+    height: 320px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .msg { margin: 6px 0; padding: 8px 12px; border-radius: 8px; max-width: 75%; word-wrap: break-word; }
+  .msg.mine { background: #38bdf8; color: #0f172a; margin-left: auto; }
+  .msg.theirs { background: #334155; }
+  .msg small { display: block; font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  .row button { width: auto; padding: 12px 18px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .topbar button { width: auto; background: #334155; color: #e2e8f0; padding: 8px 14px; }
+</style>
+</head>
+<body>
+
+<div class="card" id="authView">
+  <h1 id="authTitle">Sign in</h1>
+  <input type="email" id="email" placeholder="Email" autocomplete="username" />
+  <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+  <button id="authSubmit">Sign in</button>
+  <div class="error" id="authError"></div>
+  <div class="switch">
+    <span id="switchText">No account? <a id="switchLink">Sign up</a></span>
+  </div>
+</div>
+
+<div class="card" id="chatView">
+  <div class="topbar">
+    <div id="whoami"></div>
+    <button id="logoutBtn">Log out</button>
+  </div>
+  <input type="email" id="recipient" placeholder="Chat with (email)" />
+  <div id="messages"></div>
+  <div class="row">
+    <input type="text" id="messageText" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+  <div class="error" id="chatError"></div>
+</div>
+
+<script>
+const API = "";
+let token = null;
+let myEmail = null;
+let isSignup = false;
+let pollTimer = null;
+
+const authView = document.getElementById("authView");
+const chatView = document.getElementById("chatView");
+const authTitle = document.getElementById("authTitle");
+const authSubmit = document.getElementById("authSubmit");
+const authError = document.getElementById("authError");
+const switchText = document.getElementById("switchText");
+const switchLink = document.getElementById("switchLink");
+
+function toggleAuthMode() {
+  isSignup = !isSignup;
+  authTitle.textContent = isSignup ? "Sign up" : "Sign in";
+  authSubmit.textContent = isSignup ? "Sign up" : "Sign in";
+  switchText.innerHTML = isSignup
+    ? 'Have an account? <a id="switchLink">Sign in</a>'
+    : 'No account? <a id="switchLink">Sign up</a>';
+  document.getElementById("switchLink").addEventListener("click", toggleAuthMode);
+  authError.textContent = "";
+}
+
+switchLink.addEventListener("click", toggleAuthMode);
+
+async function handleAuthSubmit() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  authError.textContent = "";
+
+  if (!email || !password) {
+    authError.textContent = "Please enter both email and password.";
+    return;
+  }
+
+  try {
+    let res, data;
+    if (isSignup) {
+      res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+    } else {
+      const form = new URLSearchParams();
+      form.append("username", email);
+      form.append("password", password);
+      res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      });
+    }
+    data = await res.json();
+    if (!res.ok) {
+      authError.textContent = data.detail || "Something went wrong.";
+      return;
+    }
+    token = data.access_token;
+    myEmail = data.email;
+    localStorage.setItem("secureChatToken", token);
+    localStorage.setItem("secureChatEmail", myEmail);
+    showChat();
+  } catch (err) {
+    authError.textContent = "Network error. Please try again.";
+  }
+}
+
+authSubmit.addEventListener("click", handleAuthSubmit);
+document.getElementById("password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleAuthSubmit();
+});
+
+function showChat() {
+  authView.style.display = "none";
+  chatView.style.display = "block";
+  document.getElementById("whoami").textContent = myEmail;
+}
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  token = null;
+  myEmail = null;
+  localStorage.removeItem("secureChatToken");
+  localStorage.removeItem("secureChatEmail");
+  clearInterval(pollTimer);
+  chatView.style.display = "none";
+  authView.style.display = "block";
+});
+
+async function loadMessages() {
+  const other = document.getElementById("recipient").value.trim();
+  const chatError = document.getElementById("chatError");
+  if (!other) return;
+
+  try {
+    const res = await fetch(`/api/messages/${encodeURIComponent(other)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      chatError.textContent = data.detail || "Could not load messages.";
+      return;
+    }
+    chatError.textContent = "";
+    const box = document.getElementById("messages");
+    box.innerHTML = "";
+    data.forEach((m) => {
+      const div = document.createElement("div");
+      div.className = "msg " + (m.sender_email === myEmail ? "mine" : "theirs");
+      const time = new Date(m.created_at).toLocaleTimeString();
+      div.innerHTML = `${escapeHtml(m.text)}<small>${m.sender_email} · ${time}</small>`;
+      box.appendChild(div);
+    });
+    box.scrollTop = box.scrollHeight;
+  } catch (err) {
+    chatError.textContent = "Network error loading messages.";
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById("recipient").addEventListener("change", () => {
+  clearInterval(pollTimer);
+  loadMessages();
+  pollTimer = setInterval(loadMessages, 3000);
+});
+
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("messageText").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
+  const other = document.getElementById("recipient").value.trim();
+  const text = document.getElementById("messageText").value.trim();
+  const chatError = document.getElementById("chatError");
+  if (!other) {
+    chatError.textContent = "Enter who you're chatting with first.";
+    return;
+  }
+  if (!text) return;
+
+  try {
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ receiver_email: other, text }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      chatError.textContent = data.detail || "Could not send message.";
+      return;
+    }
+    document.getElementById("messageText").value = "";
+    chatError.textContent = "";
+    loadMessages();
+  } catch (err) {
+    chatError.textContent = "Network error sending message.";
+  }
+}
+
+// Auto-login if a token is already stored
+window.addEventListener("load", () => {
+  const savedToken = localStorage.getItem("secureChatToken");
+  const savedEmail = localStorage.getItem("secureChatEmail");
+  if (savedToken && savedEmail) {
+    token = savedToken;
+    myEmail = savedEmail;
+    showChat();
+  }
+});
+</script>
+</body>
+</html>

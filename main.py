@@ -290,7 +290,14 @@ def get_conversation(
 # ---------------------------------------------------------------------------
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+@app.get("/icon-192.png")
+def icon_192():
+    return FileResponse("icon-192.png")
 
+
+@app.get("/icon-512.png")
+def icon_512():
+    return FileResponse("icon-512.png")
 
 @app.get("/")
 def index():

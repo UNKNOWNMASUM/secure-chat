@@ -98,11 +98,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    truncated = password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+    return pwd_context.hash(truncated)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    truncated = plain.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+    return pwd_context.verify(truncated, hashed)
 
 
 def create_access_token(data: dict) -> str:
@@ -290,7 +292,14 @@ def get_conversation(
 # ---------------------------------------------------------------------------
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+@app.get("/icon-192.png")
+def icon_192():
+    return FileResponse("icon-192-new.png")
 
+
+@app.get("/icon-512.png")
+def icon_512():
+    return FileResponse("icon-512-new.png")
 
 @app.get("/")
 def index():

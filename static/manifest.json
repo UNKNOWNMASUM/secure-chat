@@ -1,6 +1,6 @@
 {
-  "name": "Secure Chat",
-  "short_name": "Secure Chat",
+  "name": "Smart Chat",
+  "short_name": "Smart Chat",
   "description": "Encrypted messaging app with email and password sign in.",
   "start_url": "/",
   "scope": "/",

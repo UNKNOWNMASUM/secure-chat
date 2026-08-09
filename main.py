@@ -600,4 +600,4 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(...), db: 
             if not msg_type or not to_email:
                 continue
 
-            outgoing = {"type": msg_type, "from": email, "from_us
+            outgoing = {"type": msg_type, "from": email, "from_username": user.username}

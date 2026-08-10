@@ -460,34 +460,8 @@
   .msg-deleted { font-style: italic; opacity: 0.6; }
   .msg-edited-tag { font-size: 10px; opacity: 0.7; margin-left: 4px; }
   .msg-sender-name { font-size: 11px; font-weight: 600; opacity: 0.8; margin-bottom: 2px; }
-  .msg-toolbar { display: flex; gap: 4px; margin-top: 3px; }
-  .msg-toolbar button {
-    background: none;
-    border: none;
-    padding: 2px 5px;
-    cursor: pointer;
-    opacity: 0.7;
-    color: inherit;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 4px;
-  }
-  .msg-toolbar button:hover, .msg-toolbar button:active { opacity: 1; background: rgba(0,0,0,0.12); }
-  .msg-actions { display: none; gap: 10px; margin-top: 4px; font-size: 12px; }
-  .msg-actions.open { display: flex; }
-  .msg-actions a { color: inherit; opacity: 0.85; cursor: pointer; text-decoration: underline; }
-  .react-picker {
-    display: none;
-    gap: 5px;
-    margin-top: 4px;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 4px 8px;
-    width: fit-content;
-  }
-  .react-picker.open { display: flex; }
-  .react-picker span { cursor: pointer; font-size: 18px; padding: 1px 2px; line-height: 1; }
+  .msg { user-select: none; -webkit-user-select: none; position: relative; }
+  .msg.long-pressing { transform: scale(0.97); opacity: 0.9; transition: transform 0.15s, opacity 0.15s; }
   .msg-reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .reaction-pill {
     display: inline-flex;
@@ -501,7 +475,115 @@
     cursor: pointer;
     color: var(--text);
   }
-  .reaction-pill.mine { border-color: var(--accent); }
+  .reaction-pill.mine { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--input-bg)); }
+
+  /* Instagram-style long-press message menu */
+  #msgContextOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+  }
+  #msgContextSheet {
+    width: 100%;
+    max-width: 340px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px var(--shadow);
+    overflow: hidden;
+    animation: msgSheetIn 0.18s ease-out;
+  }
+  @keyframes msgSheetIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  #msgContextEmojiRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    padding: 14px 12px 10px;
+    border-bottom: 1px solid var(--border);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  #msgContextEmojiRow span {
+    font-size: 26px;
+    line-height: 1;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: transform 0.12s, background 0.12s;
+  }
+  #msgContextEmojiRow span:active,
+  #msgContextEmojiRow span:hover {
+    background: var(--input-bg);
+    transform: scale(1.18);
+  }
+  .msg-context-actions { padding: 6px 0; }
+  .msg-context-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    font-size: 15px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .msg-context-item:hover, .msg-context-item:active { background: var(--input-bg); }
+  .msg-context-item.danger { color: #f87171; }
+  .msg-context-item svg { flex-shrink: 0; opacity: 0.85; }
+  .msg-context-item.hidden { display: none; }
+
+  #forwardPickerOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1300;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  #forwardPickerSheet {
+    width: 100%;
+    max-width: 500px;
+    max-height: 70vh;
+    background: var(--card-bg);
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  #forwardPickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  #forwardPickerList {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 0;
+  }
+  .forward-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+  .forward-item:hover, .forward-item:active { background: var(--input-bg); }
+  .forward-item .avatar { width: 40px; height: 40px; font-size: 15px; }
 
   /* --- New group creation view --- */
   #groupUserResults { max-height: 30vh; overflow-y: auto; margin: 6px 0; }
@@ -539,16 +621,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     flex-shrink: 0;
     cursor: pointer;
-    width: 60px;
+    width: 76px;
   }
   .status-ring {
-    width: 56px;
-    height: 56px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
-    padding: 2.5px;
+    padding: 3px;
     background: var(--border);
   }
   .status-ring.unseen { background: var(--accent-gradient); }
@@ -557,11 +639,11 @@
     height: 100%;
     border-radius: 50%;
     background: var(--card-bg);
-    padding: 2px;
+    padding: 2.5px;
   }
-  .status-ring-inner .avatar { width: 100%; height: 100%; font-size: 18px; }
+  .status-ring-inner .avatar { width: 100%; height: 100%; font-size: 24px; }
   .status-circle-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted-text);
     white-space: nowrap;
     overflow: hidden;
@@ -685,24 +767,89 @@
     justify-content: center;
     text-align: center;
     color: #fff;
-    font-size: 26px;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.4;
     padding: 30px;
   }
   #statusTapLeft, #statusTapRight {
     position: absolute;
     top: 60px;
-    bottom: 80px;
+    bottom: 140px;
     width: 33%;
+    z-index: 1;
   }
   #statusTapLeft { left: 0; }
   #statusTapRight { right: 0; }
+  #statusViewerFooter { position: relative; z-index: 2; }
   #statusViewerFooter {
-    padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
     color: #fff;
-    text-align: center;
   }
-  #statusViewerCaption { font-size: 14px; margin-bottom: 6px; }
-  #statusViewerViewers { font-size: 12px; opacity: 0.8; cursor: pointer; }
+  #statusViewerCaption { font-size: 15px; margin-bottom: 10px; text-align: center; }
+  #statusViewerViewers {
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.95;
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .status-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+  }
+  .status-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .status-action-btn.liked { color: #f87171; }
+  .status-action-btn.liked svg { fill: #f87171; }
+
+  #statusCommentsPanel {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  #statusCommentsSheet {
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 560px;
+    max-height: 70vh;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  #statusCommentsHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  #statusCommentsHeader h3 { margin: 0; font-size: 16px; }
+  #statusCommentsList { flex: 1; overflow-y: auto; margin-bottom: 10px; }
+  .status-comment-item { display: flex; gap: 10px; padding: 8px 0; }
+  .status-comment-item .avatar { width: 32px; height: 32px; font-size: 13px; flex-shrink: 0; }
+  .status-comment-body { font-size: 13px; }
+  .status-comment-name { font-weight: 600; margin-bottom: 2px; }
+  .status-comment-row { display: flex; gap: 8px; }
+  .status-comment-row input { flex: 1; }
+  .status-comment-row button { width: auto; padding: 10px 16px; }
 </style>
 </head>
 <body>
@@ -920,6 +1067,59 @@
   <div id="statusViewerFooter">
     <div id="statusViewerCaption"></div>
     <div id="statusViewerViewers"></div>
+    <div class="status-action-row">
+      <button class="status-action-btn" id="statusLikeBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span id="statusLikeCount">0</span></button>
+      <button class="status-action-btn" id="statusCommentBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span id="statusCommentCount">0</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="statusCommentsPanel">
+  <div id="statusCommentsSheet">
+    <div id="statusCommentsHeader">
+      <h3>Comments</h3>
+      <button class="back-btn" id="statusCommentsClose">✕</button>
+    </div>
+    <div id="statusCommentsList"></div>
+    <div class="status-comment-row">
+      <input type="text" id="statusCommentInput" placeholder="Write a comment..." autocomplete="off" />
+      <button id="statusCommentSendBtn">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Long-press message context menu (Instagram-style) -->
+<div id="msgContextOverlay">
+  <div id="msgContextSheet">
+    <div id="msgContextEmojiRow"></div>
+    <div class="msg-context-actions">
+      <div class="msg-context-item" id="msgCtxCopy">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </div>
+      <div class="msg-context-item" id="msgCtxForward">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        Forward
+      </div>
+      <div class="msg-context-item" id="msgCtxEdit">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Edit
+      </div>
+      <div class="msg-context-item danger" id="msgCtxDelete">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="forwardPickerOverlay">
+  <div id="forwardPickerSheet">
+    <div id="forwardPickerHeader">
+      <span>Forward to...</span>
+      <button class="back-btn" id="forwardPickerClose">✕</button>
+    </div>
+    <div id="forwardPickerList"></div>
   </div>
 </div>
 
@@ -948,11 +1148,17 @@ const ICON = {
   back: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
   plus: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   trash: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
   smile: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>',
 };
 
 const API = "";
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+const REACTION_EMOJIS = [
+  "👍", "❤️", "😂", "😮", "😢", "🙏",
+  "🔥", "👏", "😍", "🥰", "😎", "🤔",
+  "😡", "😭", "🎉", "💯", "🤝", "👀",
+  "💪", "✨", "🤗", "😱", "😴", "🫡"
+];
 let token = null;
 let myEmail = null;
 let myUsername = null;
@@ -1000,14 +1206,26 @@ const authError = document.getElementById("authError");
 const switchText = document.getElementById("switchText");
 const switchLink = document.getElementById("switchLink");
 
+// --- Hide every main screen so only one is visible at a time ---
+function hideAllViews() {
+  const ids = [
+    "welcomeView", "authView", "forgotView", "listView", "chatView",
+    "newGroupView", "editProfileView", "createStatusView",
+  ];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+}
+
 // --- Welcome screen (ask new vs existing user first) ---
 function showWelcome() {
+  hideAllViews();
   welcomeView.style.display = "block";
-  authView.style.display = "none";
 }
 
 function goToAuth(signupMode) {
-  welcomeView.style.display = "none";
+  hideAllViews();
   authView.style.display = "block";
   if (signupMode && !isSignup) toggleAuthMode();
   if (!signupMode && isSignup) toggleAuthMode();
@@ -1081,7 +1299,7 @@ const forgotView = document.getElementById("forgotView");
 const forgotError = document.getElementById("forgotError");
 
 document.getElementById("forgotLink").addEventListener("click", () => {
-  authView.style.display = "none";
+  hideAllViews();
   forgotView.style.display = "block";
   document.getElementById("forgotStep1").style.display = "block";
   document.getElementById("forgotStep2").style.display = "none";
@@ -1089,7 +1307,7 @@ document.getElementById("forgotLink").addEventListener("click", () => {
 });
 
 document.getElementById("backToSignIn").addEventListener("click", () => {
-  forgotView.style.display = "none";
+  hideAllViews();
   authView.style.display = "block";
 });
 
@@ -1144,7 +1362,7 @@ document.getElementById("resetPasswordBtn").addEventListener("click", async () =
       forgotError.textContent = data.detail || "Something went wrong.";
       return;
     }
-    forgotView.style.display = "none";
+    hideAllViews();
     authView.style.display = "block";
     document.getElementById("email").value = email;
     document.getElementById("password").value = "";
@@ -1238,8 +1456,6 @@ function doLogout() {
   clearInterval(listPollTimer);
   if (typeof endCall === "function") endCall();
   disconnectSignaling();
-  chatView.style.display = "none";
-  listView.style.display = "none";
   showWelcome();
 }
 document.getElementById("logoutBtn").addEventListener("click", doLogout);
@@ -1367,8 +1583,7 @@ tabCalls.addEventListener("click", showCallsTab);
 // ---------------------------------------------------------------------
 
 function showList() {
-  authView.style.display = "none";
-  chatView.style.display = "none";
+  hideAllViews();
   listView.style.display = "block";
   document.getElementById("myAvatar").innerHTML = avatarHtml(myUsername, myAvatarUrl);
   showChatsTab();
@@ -1552,13 +1767,12 @@ document.getElementById("menuEditProfile").addEventListener("click", () => {
   document.getElementById("editUsername").value = myUsername || "";
   document.getElementById("editPhone").value = myPhone || "";
   document.getElementById("editProfileError").textContent = "";
-  listView.style.display = "none";
+  hideAllViews();
   editProfileView.style.display = "block";
 });
 
 document.getElementById("editProfileBackBtn").addEventListener("click", () => {
-  editProfileView.style.display = "none";
-  listView.style.display = "block";
+  showList();
 });
 
 document.getElementById("editProfileAvatar").addEventListener("click", () => {
@@ -1591,8 +1805,7 @@ document.getElementById("saveProfileBtn").addEventListener("click", async () => 
     myPhone = data.phone || "";
     localStorage.setItem("secureChatUsername", myUsername);
     document.getElementById("myAvatar").innerHTML = avatarHtml(myUsername, myAvatarUrl);
-    editProfileView.style.display = "none";
-    listView.style.display = "block";
+    showList();
   } catch (err) {
     editProfileError.textContent = "Network error. Please try again.";
   }
@@ -1610,13 +1823,12 @@ document.getElementById("newGroupBtn").addEventListener("click", () => {
   document.getElementById("groupUserResults").innerHTML = "";
   document.getElementById("groupError").textContent = "";
   renderSelectedMembers();
-  listView.style.display = "none";
+  hideAllViews();
   newGroupView.style.display = "block";
 });
 
 document.getElementById("cancelNewGroup").addEventListener("click", () => {
-  newGroupView.style.display = "none";
-  listView.style.display = "block";
+  showList();
 });
 
 function renderSelectedMembers() {
@@ -1716,7 +1928,7 @@ function openChat(email, username, avatarUrl) {
   document.getElementById("chatTitle").textContent = username || email;
   document.getElementById("dmCallButtons").style.display = "flex";
   document.getElementById("convSearch").value = "";
-  listView.style.display = "none";
+  hideAllViews();
   chatView.style.display = "flex";
   clearInterval(listPollTimer);
   loadMessages();
@@ -1731,7 +1943,7 @@ function openGroupChat(groupId, name, avatarUrl) {
   document.getElementById("chatTitle").textContent = name;
   document.getElementById("dmCallButtons").style.display = "none";
   document.getElementById("convSearch").value = "";
-  listView.style.display = "none";
+  hideAllViews();
   chatView.style.display = "flex";
   clearInterval(listPollTimer);
   loadMessages();
@@ -1777,7 +1989,6 @@ async function loadMessages() {
       const div = document.createElement("div");
       const mine = m.sender_email === myEmail;
       div.className = "msg " + (mine ? "mine" : "theirs");
-      div.dataset.id = m.id;
       const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
       let bodyHtml;
@@ -1805,71 +2016,224 @@ async function loadMessages() {
             ).join("")}</div>`
           : "";
 
-      const toolbarHtml = m.is_deleted
-        ? ""
-        : `<div class="msg-toolbar">
-             <button class="react-toggle-btn" data-id="${m.id}" title="React">${ICON.smile}</button>
-             ${mine ? `<button class="menu-toggle-btn" data-id="${m.id}" title="Options">${ICON.menu}</button>` : ""}
-           </div>
-           <div class="react-picker" data-id="${m.id}">
-             ${REACTION_EMOJIS.map((e) => `<span data-id="${m.id}" data-emoji="${e}">${e}</span>`).join("")}
-           </div>
-           ${mine ? `<div class="msg-actions" data-id="${m.id}">${m.text ? `<a class="edit-msg" data-id="${m.id}" data-text="${escapeHtml(m.text)}">Edit</a>` : ""}<a class="delete-msg" data-id="${m.id}">Delete</a></div>` : ""}`;
+      div.innerHTML = `${senderNameHtml}${bodyHtml}${reactionsHtml}<small>${editedTag}${tickHtml}<span>${time}</span></small>`;
 
-      div.innerHTML = `${senderNameHtml}${bodyHtml}${reactionsHtml}<small>${editedTag}${tickHtml}<span>${time}</span></small>${toolbarHtml}`;
+      // Store message data for long-press menu
+      div.dataset.msgId = m.id;
+      div.dataset.msgText = m.text || "";
+      div.dataset.msgMine = mine ? "1" : "0";
+      div.dataset.msgDeleted = m.is_deleted ? "1" : "0";
+      div.dataset.msgFileUrl = m.file_url || "";
+      div.dataset.msgFileName = m.file_name || "";
+      div.dataset.msgFileType = m.file_type || "";
+
+      if (!m.is_deleted) {
+        bindLongPress(div, m);
+      }
+
       box.appendChild(div);
     });
 
-    box.querySelectorAll(".react-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const picker = box.querySelector(`.react-picker[data-id="${btn.dataset.id}"]`);
-        const wasOpen = picker.classList.contains("open");
-        box.querySelectorAll(".react-picker.open, .msg-actions.open").forEach((el) => el.classList.remove("open"));
-        if (!wasOpen) picker.classList.add("open");
-      });
-    });
-    box.querySelectorAll(".menu-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const menu = box.querySelector(`.msg-actions[data-id="${btn.dataset.id}"]`);
-        const wasOpen = menu.classList.contains("open");
-        box.querySelectorAll(".react-picker.open, .msg-actions.open").forEach((el) => el.classList.remove("open"));
-        if (!wasOpen) menu.classList.add("open");
-      });
-    });
-    box.querySelectorAll(".react-picker span").forEach((el) => {
-      el.addEventListener("click", async (ev) => {
-        ev.stopPropagation();
-        el.closest(".react-picker").classList.remove("open");
-        await toggleReaction(el.dataset.id, el.dataset.emoji);
-      });
-    });
     box.querySelectorAll(".reaction-pill").forEach((el) => {
       el.addEventListener("click", async (ev) => {
         ev.stopPropagation();
         await toggleReaction(el.dataset.id, el.dataset.emoji);
       });
     });
-    box.querySelectorAll(".delete-msg").forEach((el) => {
-      el.addEventListener("click", async (ev) => {
-        ev.stopPropagation();
-        if (!confirm("Delete this message?")) return;
-        await deleteMessage(el.dataset.id);
-      });
-    });
-    box.querySelectorAll(".edit-msg").forEach((el) => {
-      el.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const currentText = el.dataset.text || "";
-        const newText = prompt("Edit message:", currentText);
-        if (newText !== null && newText.trim()) editMessage(el.dataset.id, newText.trim());
-      });
-    });
 
     box.scrollTop = box.scrollHeight;
   } catch (err) {
     chatError.textContent = "Network error loading messages.";
+  }
+}
+
+// --- Long-press (Instagram-style) message menu ---
+let longPressTimer = null;
+let longPressTriggered = false;
+let contextMsg = null; // { id, text, mine, file_url, file_name, file_type }
+
+function bindLongPress(div, m) {
+  const start = (ev) => {
+    if (ev.type === "mousedown" && ev.button !== 0) return;
+    longPressTriggered = false;
+    div.classList.add("long-pressing");
+    longPressTimer = setTimeout(() => {
+      longPressTriggered = true;
+      div.classList.remove("long-pressing");
+      if (navigator.vibrate) try { navigator.vibrate(20); } catch (_) {}
+      openMsgContext(m);
+    }, 450);
+  };
+  const cancel = () => {
+    clearTimeout(longPressTimer);
+    div.classList.remove("long-pressing");
+  };
+  const end = (ev) => {
+    clearTimeout(longPressTimer);
+    div.classList.remove("long-pressing");
+    if (longPressTriggered) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  };
+
+  div.addEventListener("touchstart", start, { passive: true });
+  div.addEventListener("touchend", end);
+  div.addEventListener("touchmove", cancel);
+  div.addEventListener("touchcancel", cancel);
+  div.addEventListener("mousedown", start);
+  div.addEventListener("mouseup", end);
+  div.addEventListener("mouseleave", cancel);
+  // Prevent native context menu so our menu shows instead
+  div.addEventListener("contextmenu", (ev) => {
+    ev.preventDefault();
+    openMsgContext(m);
+  });
+}
+
+function openMsgContext(m) {
+  contextMsg = {
+    id: m.id,
+    text: m.text || "",
+    mine: m.sender_email === myEmail,
+    file_url: m.file_url || null,
+    file_name: m.file_name || null,
+    file_type: m.file_type || null,
+  };
+
+  const emojiRow = document.getElementById("msgContextEmojiRow");
+  emojiRow.innerHTML = REACTION_EMOJIS.map((e) => `<span data-emoji="${e}">${e}</span>`).join("");
+  emojiRow.querySelectorAll("span").forEach((el) => {
+    el.addEventListener("click", async () => {
+      closeMsgContext();
+      await toggleReaction(contextMsg.id, el.dataset.emoji);
+    });
+  });
+
+  // Show Edit/Delete only for own messages
+  document.getElementById("msgCtxEdit").classList.toggle("hidden", !contextMsg.mine || !contextMsg.text);
+  document.getElementById("msgCtxDelete").classList.toggle("hidden", !contextMsg.mine);
+  // Copy only if there is text
+  document.getElementById("msgCtxCopy").classList.toggle("hidden", !contextMsg.text);
+
+  document.getElementById("msgContextOverlay").style.display = "flex";
+}
+
+function closeMsgContext() {
+  document.getElementById("msgContextOverlay").style.display = "none";
+}
+
+document.getElementById("msgContextOverlay").addEventListener("click", (ev) => {
+  if (ev.target.id === "msgContextOverlay") closeMsgContext();
+});
+
+document.getElementById("msgCtxCopy").addEventListener("click", async () => {
+  if (!contextMsg?.text) return;
+  try {
+    await navigator.clipboard.writeText(contextMsg.text);
+  } catch (_) {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = contextMsg.text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  closeMsgContext();
+});
+
+document.getElementById("msgCtxEdit").addEventListener("click", () => {
+  if (!contextMsg?.mine || !contextMsg.text) return;
+  const newText = prompt("Edit message:", contextMsg.text);
+  closeMsgContext();
+  if (newText !== null && newText.trim()) editMessage(contextMsg.id, newText.trim());
+});
+
+document.getElementById("msgCtxDelete").addEventListener("click", async () => {
+  if (!contextMsg?.mine) return;
+  if (!confirm("Delete this message?")) return;
+  const id = contextMsg.id;
+  closeMsgContext();
+  await deleteMessage(id);
+});
+
+document.getElementById("msgCtxForward").addEventListener("click", () => {
+  if (!contextMsg) return;
+  closeMsgContext();
+  openForwardPicker(contextMsg);
+});
+
+async function openForwardPicker(msg) {
+  const list = document.getElementById("forwardPickerList");
+  list.innerHTML = `<div class="empty-hint">Loading...</div>`;
+  document.getElementById("forwardPickerOverlay").style.display = "flex";
+  try {
+    const res = await fetch("/api/conversations", { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data) || data.length === 0) {
+      list.innerHTML = `<div class="empty-hint">No chats to forward to.</div>`;
+      return;
+    }
+    list.innerHTML = "";
+    data.forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "forward-item";
+      row.innerHTML = `
+        <div class="avatar">${avatarHtml(c.username, c.avatar_url)}</div>
+        <div>
+          <div style="font-weight:600;font-size:14px;">${escapeHtml(c.username)}</div>
+          <div style="font-size:12px;color:var(--muted-text);">${escapeHtml(c.email)}</div>
+        </div>
+      `;
+      row.addEventListener("click", async () => {
+        document.getElementById("forwardPickerOverlay").style.display = "none";
+        await forwardMessage(msg, c.email);
+      });
+      list.appendChild(row);
+    });
+  } catch (err) {
+    list.innerHTML = `<div class="empty-hint">Could not load chats.</div>`;
+  }
+}
+
+document.getElementById("forwardPickerClose").addEventListener("click", () => {
+  document.getElementById("forwardPickerOverlay").style.display = "none";
+});
+document.getElementById("forwardPickerOverlay").addEventListener("click", (ev) => {
+  if (ev.target.id === "forwardPickerOverlay") {
+    document.getElementById("forwardPickerOverlay").style.display = "none";
+  }
+});
+
+async function forwardMessage(msg, toEmail) {
+  try {
+    const body = {
+      receiver_email: toEmail,
+      text: msg.text || null,
+      file_url: msg.file_url || null,
+      file_name: msg.file_name || null,
+      file_type: msg.file_type || null,
+    };
+    if (!body.text && !body.file_url) return;
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.detail || "Could not forward message.");
+      return;
+    }
+    // small confirmation
+    const toast = document.createElement("div");
+    toast.textContent = "Forwarded";
+    toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-text);padding:10px 18px;border-radius:999px;z-index:2000;font-size:14px;font-weight:600;";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1500);
+  } catch (err) {
+    alert("Network error forwarding message.");
   }
 }
 
@@ -1889,10 +2253,6 @@ async function toggleReaction(messageId, emoji) {
     // ignore
   }
 }
-
-document.addEventListener("click", () => {
-  document.querySelectorAll(".react-picker.open, .msg-actions.open").forEach((el) => el.classList.remove("open"));
-});
 
 async function editMessage(id, text) {
   try {
@@ -2421,7 +2781,7 @@ function openCreateStatus() {
   document.getElementById("statusMediaPreview").innerHTML = "";
   document.getElementById("statusError").textContent = "";
   showStatusMode("text");
-  listView.style.display = "none";
+  hideAllViews();
   document.getElementById("createStatusView").style.display = "block";
 }
 
@@ -2603,11 +2963,16 @@ function showStatusItem(index) {
 
   const viewersEl = document.getElementById("statusViewerViewers");
   if (statusViewerOwnerEmail === myEmail) {
-    viewersEl.style.display = "block";
-    viewersEl.textContent = `👁 ${post.view_count} viewed — tap for details`;
+    viewersEl.style.display = "flex";
+    viewersEl.innerHTML = `${ICON.eye}<span>${post.view_count} viewed — tap for details</span>`;
   } else {
     viewersEl.style.display = "none";
   }
+
+  const likeBtn = document.getElementById("statusLikeBtn");
+  likeBtn.classList.toggle("liked", !!post.liked_by_me);
+  document.getElementById("statusLikeCount").textContent = post.like_count || 0;
+  document.getElementById("statusCommentCount").textContent = post.comment_count || 0;
 
   // Animate the current progress bar and auto-advance
   requestAnimationFrame(() => {
@@ -2666,6 +3031,97 @@ document.getElementById("statusDeleteBtn").addEventListener("click", async () =>
   } catch (err) {
     // ignore
   }
+});
+
+document.getElementById("statusLikeBtn").addEventListener("click", async () => {
+  const post = statusViewerQueue[statusViewerIndex];
+  if (!post) return;
+  try {
+    const res = await fetch(`/api/status/${post.id}/like`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return;
+    post.liked_by_me = data.liked;
+    post.like_count = data.like_count;
+    document.getElementById("statusLikeBtn").classList.toggle("liked", data.liked);
+    document.getElementById("statusLikeCount").textContent = data.like_count;
+  } catch (err) {
+    // ignore
+  }
+});
+
+async function loadStatusComments() {
+  const post = statusViewerQueue[statusViewerIndex];
+  if (!post) return;
+  const list = document.getElementById("statusCommentsList");
+  list.innerHTML = `<div class="empty-hint">Loading...</div>`;
+  try {
+    const res = await fetch(`/api/status/${post.id}/comments`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (!res.ok) {
+      list.innerHTML = `<div class="empty-hint">Could not load comments.</div>`;
+      return;
+    }
+    if (data.length === 0) {
+      list.innerHTML = `<div class="empty-hint">No comments yet. Be the first!</div>`;
+      return;
+    }
+    list.innerHTML = data
+      .map(
+        (c) => `
+        <div class="status-comment-item">
+          <div class="avatar">${avatarHtml(c.username, c.avatar_url)}</div>
+          <div class="status-comment-body">
+            <div class="status-comment-name">${escapeHtml(c.username)}</div>
+            <div>${escapeHtml(c.text)}</div>
+          </div>
+        </div>`
+      )
+      .join("");
+    list.scrollTop = list.scrollHeight;
+  } catch (err) {
+    list.innerHTML = `<div class="empty-hint">Network error.</div>`;
+  }
+}
+
+document.getElementById("statusCommentBtn").addEventListener("click", () => {
+  clearTimeout(statusAdvanceTimer);
+  document.getElementById("statusCommentsPanel").style.display = "flex";
+  loadStatusComments();
+});
+
+document.getElementById("statusCommentsClose").addEventListener("click", () => {
+  document.getElementById("statusCommentsPanel").style.display = "none";
+  document.getElementById("statusCommentInput").value = "";
+  showStatusItem(statusViewerIndex); // resume the current item's timer
+});
+
+async function sendStatusComment() {
+  const input = document.getElementById("statusCommentInput");
+  const text = input.value.trim();
+  const post = statusViewerQueue[statusViewerIndex];
+  if (!text || !post) return;
+  input.value = "";
+  try {
+    const res = await fetch(`/api/status/${post.id}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return;
+    post.comment_count = (post.comment_count || 0) + 1;
+    document.getElementById("statusCommentCount").textContent = post.comment_count;
+    loadStatusComments();
+  } catch (err) {
+    // ignore
+  }
+}
+
+document.getElementById("statusCommentSendBtn").addEventListener("click", sendStatusComment);
+document.getElementById("statusCommentInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendStatusComment();
 });
 
 // Auto-login if a token is already stored

@@ -211,6 +211,25 @@ class MessageReaction(Base):
     user = relationship("User", foreign_keys=[user_id])
 
 
+class StatusLike(Base):
+    __tablename__ = "status_likes"
+    id = Column(Integer, primary_key=True, index=True)
+    status_id = Column(Integer, ForeignKey("status_posts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class StatusComment(Base):
+    __tablename__ = "status_comments"
+    id = Column(Integer, primary_key=True, index=True)
+    status_id = Column(Integer, ForeignKey("status_posts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    text = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    user = relationship("User", foreign_keys=[user_id])
+
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -478,7 +497,23 @@ class StatusPostOut(BaseModel):
     is_permanent: bool
     viewed_by_me: bool
     view_count: int
+    like_count: int = 0
+    liked_by_me: bool = False
+    comment_count: int = 0
     created_at: datetime.datetime
+
+
+class StatusCommentOut(BaseModel):
+    id: int
+    email: str
+    username: str
+    avatar_url: Optional[str] = None
+    text: str
+    created_at: datetime.datetime
+
+
+class StatusCommentCreate(BaseModel):
+    text: str
 
 
 class StatusFeedEntryOut(BaseModel):
@@ -909,7 +944,12 @@ def search_users(
 # ---------------------------------------------------------------------------
 # Message reactions (works for both DM messages and group messages)
 # ---------------------------------------------------------------------------
-ALLOWED_REACTION_EMOJIS = {"👍", "❤️", "😂", "😮", "😢", "🙏"}
+ALLOWED_REACTION_EMOJIS = {
+    "👍", "❤️", "😂", "😮", "😢", "🙏",
+    "🔥", "👏", "😍", "🥰", "😎", "🤔",
+    "😡", "😭", "🎉", "💯", "🤝", "👀",
+    "💪", "✨", "🤗", "😱", "😴", "🫡",
+}
 
 
 def _reactions_for(message_type: str, message_ids: List[int], current_user: User, db: Session) -> Dict[int, List[ReactionOut]]:
@@ -1356,6 +1396,11 @@ def get_status_feed(
         for v in db.query(StatusView).filter(StatusView.viewer_id == current_user.id).all()
     }
 
+    my_liked_ids = {
+        l.status_id
+        for l in db.query(StatusLike).filter(StatusLike.user_id == current_user.id).all()
+    }
+
     by_user: Dict[int, List[StatusPost]] = {}
     for post in all_posts:
         if not _status_is_active(post):
@@ -1378,6 +1423,9 @@ def get_status_feed(
                 is_permanent=p.is_permanent,
                 viewed_by_me=p.id in viewed_ids,
                 view_count=db.query(StatusView).filter(StatusView.status_id == p.id).count(),
+                like_count=db.query(StatusLike).filter(StatusLike.status_id == p.id).count(),
+                liked_by_me=p.id in my_liked_ids,
+                comment_count=db.query(StatusComment).filter(StatusComment.status_id == p.id).count(),
                 created_at=p.created_at,
             )
             for p in posts
@@ -1454,9 +1502,94 @@ def delete_status(
     if post.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only delete your own status")
     db.query(StatusView).filter(StatusView.status_id == status_id).delete()
+    db.query(StatusLike).filter(StatusLike.status_id == status_id).delete()
+    db.query(StatusComment).filter(StatusComment.status_id == status_id).delete()
     db.delete(post)
     db.commit()
     return {"message": "Status deleted"}
+
+
+@app.post("/api/status/{status_id}/like")
+def toggle_status_like(
+    status_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    post = db.query(StatusPost).filter(StatusPost.id == status_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Status not found")
+
+    existing = (
+        db.query(StatusLike)
+        .filter(StatusLike.status_id == status_id, StatusLike.user_id == current_user.id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+        liked = False
+    else:
+        db.add(StatusLike(status_id=status_id, user_id=current_user.id))
+        db.commit()
+        liked = True
+
+    like_count = db.query(StatusLike).filter(StatusLike.status_id == status_id).count()
+    return {"liked": liked, "like_count": like_count}
+
+
+@app.get("/api/status/{status_id}/comments", response_model=List[StatusCommentOut])
+def get_status_comments(
+    status_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    post = db.query(StatusPost).filter(StatusPost.id == status_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Status not found")
+    rows = (
+        db.query(StatusComment)
+        .filter(StatusComment.status_id == status_id)
+        .order_by(StatusComment.created_at.asc())
+        .all()
+    )
+    return [
+        StatusCommentOut(
+            id=c.id,
+            email=c.user.email,
+            username=c.user.username,
+            avatar_url=c.user.avatar_url,
+            text=c.text,
+            created_at=c.created_at,
+        )
+        for c in rows
+    ]
+
+
+@app.post("/api/status/{status_id}/comments", status_code=201)
+def add_status_comment(
+    status_id: int,
+    payload: StatusCommentCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    post = db.query(StatusPost).filter(StatusPost.id == status_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Status not found")
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Comment cannot be empty")
+    comment = StatusComment(status_id=status_id, user_id=current_user.id, text=text)
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return {
+        "id": comment.id,
+        "email": current_user.email,
+        "username": current_user.username,
+        "avatar_url": current_user.avatar_url,
+        "text": comment.text,
+        "created_at": comment.created_at,
+    }
 
 
 @app.post("/api/forgot-password")
